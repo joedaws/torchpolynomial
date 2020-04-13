@@ -217,13 +217,13 @@ class LinearFeatures(nn.Module):
         # set up hidden layers
         self.hidden = nn.ModuleList([nn.Linear(in_d,mid_d)])
         self.hidden.extend([nn.Linear(mid_d,mid_d) for i in range(1,depth-1)])
-        self.hidden.append(nn.Linear(mid_d,out_d))
+        self.coef = nn.Linear(mid_d,out_d)
 
     def forward(self,x):
         x = self.hidden[0](x).clamp(min=0)
         for i in range(1,self.depth-1):
             x = self.hidden[i](x).clamp(min=0)
-        return self.hidden[-1](x)
+        return self.coef(x)
                     
     def poly_init(self):
         """
@@ -232,6 +232,8 @@ class LinearFeatures(nn.Module):
         """
         with torch.no_grad():
             # zero weights and biases
+            self.coef.weight.fill_(0)
+            self.coef.bias.fill_(0)
             for layer in self.hidden:
                 layer.weight.fill_(0)
                 layer.bias.fill_(0)
@@ -246,5 +248,6 @@ class LinearFeatures(nn.Module):
                 self.hidden[i].weight.data = torch.eye(self.mid_d)    
 
             # output layer weights
-            self.hidden[-1].weight.data = torch.transpose(self.hidden[0].weight.data,0,1)
+            self.coef.weight.data = torch.transpose(self.hidden[0].weight.data,0,1)
+
 
